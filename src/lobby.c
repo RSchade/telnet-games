@@ -9,16 +9,20 @@ void add_player(struct lobby *lobby, struct player *new_p) {
     lobby->player[lobby->player_len - 1] = new_p;
 }
 
-void remove_player(struct lobby *lobby, char *id) {
+void remove_player(struct lobby *lobby, char *id, int8_t del) {
     // take the end and put it in the middle
-    for (uint32_t i = 0; i < lobby->player_len; i++) {
+    for (size_t i = 0; i < lobby->player_len; i++) {
         if (strcmp(lobby->player[i]->id, id) == 0) {
             if (i != lobby->player_len - 1) {
                 // take the end and put it here
                 lobby->player[i] = lobby->player[lobby->player_len - 1];
             }
             lobby->player_len--;
-            free(lobby->player[i]);
+            if (del > 0) {
+                struct player *p = lobby->player[i];
+                // TODO: add more frees for the inner pieces of data
+                free(p);
+            }
         }
     }
 }

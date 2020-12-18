@@ -34,6 +34,9 @@ int socket_init() {
 
     fcntl(socket_desc, F_SETFL, O_NONBLOCK);
 
+    // ignore SIGPIPE
+    signal(SIGPIPE, SIG_IGN);
+
     return 0;
 }
 
@@ -56,6 +59,14 @@ void socket_poll() {
         // poll (maybe do select?)
         event_loop();
     }
+}
+
+ssize_t write_str(int socket, char *buf) {
+    ssize_t written = write(socket, buf, strlen(buf));
+    if (written == -1) {
+        printf("Write failed with error:\n%s\n", strerror(errno));
+    }
+    return written;
 }
 
 void close_sock() {
