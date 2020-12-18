@@ -12,7 +12,7 @@ char *cn_start_msg = "Starting game in current lobby...\n";
 char *cn_pick_player_msg = "Enter 1 for player, 2 for spymaster then enter when ready\n";
 char *cn_retry_msg = "Invalid input, please retry...\n";
 char *cn_player_turn_msg = "Lines entered will be transmitted to your teammates, when you are ready to guess type an exclamation point (!) before a single word and press enter. Once a consensus is reached that word will be your team's guess. To stop guessing your team must reach consensus on !!\n";
-char *cn_spymaster_turn_msg = "Enter in a word comma a digit (0-9) and then press enter to send your team a clue on which word to guess\n";
+char *cn_spymaster_turn_msg = "Enter in a word comma a digit (1-9) and then press enter to send your team a clue on which word to guess\n";
 char *cn_waiting_turn_msg = "While you wait for your team's turn, you can type messages to your teammates\n";
 char *cn_guess_recieved_msg = "Your guess has been recieved, it currently is: ";
 char *cn_new_clue = "The spymaster clue is: ";
@@ -43,8 +43,11 @@ ssize_t write_str2(int socket, char *buf, char *id, struct lobby *l) {
         remove_player(l, id, 0);
         // take out of master lobby
         remove_player(&master_lobby, id, 1);
+        return -2;
+    } else if (out == -1) {
+        return -1;
     }
-    return out;
+    return 0;
 }
 
 void escape_str(char *str) {
@@ -68,12 +71,16 @@ void codenames_states(struct player *new_player, char *buf) {
 
     switch (checkpt) {
         case CN_START:
-            write_str2(socket, cn_start_msg, id, lobby);
+            if (write_str2(socket, cn_start_msg, id, lobby) < 0) {
+                return;
+            }
             new_checkpt = CN_PICK_PLAYER_TYPE;
             break;
         case CN_PICK_PLAYER_TYPE:
             if (prev_checkpt != CN_PICK_PLAYER_TYPE) {
-                write_str2(socket, cn_pick_player_msg, id, lobby);
+                if (write_str2(socket, cn_pick_player_msg, id, lobby) < 0) {
+                    return;
+                }
             }
             if (buf != NULL) {
                 if (strcmp(buf, "1") == 0) {
@@ -83,7 +90,9 @@ void codenames_states(struct player *new_player, char *buf) {
                     new_player->player_type = CN_SPYMASTER;
                     new_checkpt = CN_PRINT_BOARD;
                 } else {
-                    write_str2(socket, cn_retry_msg, id, lobby);
+                    if (write_str2(socket, cn_retry_msg, id, lobby) < 0) {
+                        return;
+                    }
                 }
             }
             break;
@@ -92,11 +101,14 @@ void codenames_states(struct player *new_player, char *buf) {
                 char *board = get_board_str(lobby->r, lobby->c, lobby->board);
                 // TODO: add score to top string
                 char *top_1 = new_player->team == CN_RED_TEAM ? "Red Team, " : "Blue Team, ";
-                char *top_2 = lobby->turn == CN_RED_TEAM ? "Red's Turn\n" : "Blue's Turn\n";
-                write_str2(socket, top_1, id, lobby);
-                write_str2(socket, top_2, id, lobby);
-                write_str2(socket, board, id, lobby);
-                write_str2(socket, "\n", id, lobby);
+                char *top_2 = lobby->turn == new_player->team ? "Your Turn\n" : "Their Turn\n";
+                ssize_t err = write_str2(socket, top_1, id, lobby);
+                err |= write_str2(socket, top_2, id, lobby);
+                err |= write_str2(socket, board, id, lobby);
+                err |= write_str2(socket, "\n", id, lobby);
+                if (err < 0) {
+                    return;
+                }
                 free(board);
             }
             if (new_player->team != lobby->turn) {
@@ -109,7 +121,9 @@ void codenames_states(struct player *new_player, char *buf) {
             if (new_player->player_type == CN_PLAYER) {
                 // initial message player
                 if (prev_checkpt != CN_YOUR_TURN) {
-                    write_str2(socket, cn_player_turn_msg, id, lobby);
+                    if (write_str2(socket, cn_player_turn_msg, id, lobby) < 0) {
+                        return;
+                    }
                 }
                 if (buf != NULL && buf[0] == '!') {
                     // parse !<word>
@@ -119,9 +133,12 @@ void codenames_states(struct player *new_player, char *buf) {
                         free(new_player->cur_guess);
                     }
                     new_player->cur_guess = guess;
-                    write_str2(socket, cn_guess_recieved_msg, id, lobby);
-                    write_str2(socket, guess, id, lobby);
-                    write_str2(socket, "\n", id, lobby);
+                    ssize_t err = write_str2(socket, cn_guess_recieved_msg, id, lobby);
+                    err |= write_str2(socket, guess, id, lobby);
+                    err |= write_str2(socket, "\n", id, lobby);
+                    if (err < 0) {
+                        return;
+                    }
                     printf("Guess: %s\n", new_player->cur_guess);
                 } else if (buf != NULL) {
                     // team chat
@@ -130,13 +147,17 @@ void codenames_states(struct player *new_player, char *buf) {
             } else if(new_player->player_type == CN_SPYMASTER) {
                 // initial message spymaster
                 if (prev_checkpt != CN_YOUR_TURN) {
-                    write_str2(socket, cn_spymaster_turn_msg, id, lobby);
+                    if (write_str2(socket, cn_spymaster_turn_msg, id, lobby) < 0) {
+                        return;
+                    }
                 }
                 if (buf != NULL && lobby->cur_clue == NULL) {
                     size_t len = strlen(buf);
                     // parse <word>,<number> (word must be at least 4 characters, number is > 0 and <= 9)
                     if (len < 6 || buf[len - 2] != ',' || buf[len - 1] > 57 || buf[len - 1] < 49) {
-                        write_str2(socket, cn_retry_msg, id, lobby);
+                        if (write_str2(socket, cn_retry_msg, id, lobby) < 0) {
+                            return;
+                        }
                     } else {
                         // put clue into lobby
                         char *clue = malloc(sizeof(char) * strlen(buf) + 1);
@@ -154,7 +175,9 @@ void codenames_states(struct player *new_player, char *buf) {
             break;
         case CN_NOT_YOUR_TURN:
         if (prev_checkpt != CN_NOT_YOUR_TURN) {
-                write_str2(socket, cn_waiting_turn_msg, id, lobby);
+                if (write_str2(socket, cn_waiting_turn_msg, id, lobby) < 0) {
+                    return;
+                }
             }
             // team chat
             chat_flag = 1;
@@ -199,7 +222,9 @@ void codenames_game_rules(struct lobby *lobby) {
                     strcat(full_chat, ": ");
                     strcat(full_chat, p->chat_buffer);
                     strcat(full_chat, "\n");
-                    write_str2(p2->socket, full_chat, p2->id, lobby);
+                    if (write_str2(p2->socket, full_chat, p2->id, lobby) < 0) {
+                        continue;
+                    }
                     free(full_chat);
                 }
             }
