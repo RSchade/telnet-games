@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include "lobby.h"
 
 void add_player(struct lobby *lobby, struct player *new_p) {
@@ -20,6 +21,7 @@ void remove_player(struct lobby *lobby, char *id, int8_t del) {
             lobby->player_len--;
             if (del > 0) {
                 struct player *p = lobby->player[i];
+                close(p->socket);
                 // TODO: add more frees for the inner pieces of data
                 free(p);
             }

@@ -1,3 +1,6 @@
+#ifndef __H_LOBBY
+#define __H_LOBBY
+
 #include <arpa/inet.h>
 #include <stdio.h>
 
@@ -5,9 +8,7 @@ struct player;
 
 struct lobby {
     char *name;
-    char ***board;
-    uint8_t r;
-    uint8_t c;
+    struct cn_board *board;
     struct player **player;
     size_t player_len;
     uint8_t turn;
@@ -29,10 +30,16 @@ struct player {
     struct sockaddr_in addr;
     struct lobby *lobby;
     char *chat_buffer;
+    int8_t disc;
+    uint8_t game;
 };
+
+#include "board.h"
 
 
 char *get_lobby_str(struct lobby *lobby);
 struct player *get_player(struct lobby *lobby, char *id);
 void remove_player(struct lobby *lobby, char *id, int8_t del);
 void add_player(struct lobby *lobby, struct player *new_p);
+
+#endif
