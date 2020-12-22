@@ -75,13 +75,17 @@ char *get_board_str(struct cn_board *in_board, uint8_t player) {
         for (uint8_t j = 0; j < c; j++) {
             board_len = update_board_len(&board_size, grid_len + 1, &board);
             struct cn_board_elem *elem = in_board->grid[i][j];
+            uint8_t picked = (elem->state & CN_BOARD_PICKED) > 0;
             char *flag_str = board_flag_str(elem->state);
             char *cur_word;
-            if (player == CN_SPYMASTER || (player == CN_PLAYER && (elem->state & CN_BOARD_PICKED))) {
+            if (player == CN_SPYMASTER || (player == CN_PLAYER && picked)) {
                 // append agent data to the front of cur_word
-                cur_word = malloc(sizeof(char) * strlen(elem->word) + strlen(flag_str) + 1);
+                cur_word = malloc(sizeof(char) * strlen(elem->word) + strlen(flag_str) + 4);
                 strcpy(cur_word, flag_str);
                 strcat(cur_word, elem->word);
+                if (player == CN_SPYMASTER && picked) {
+                    strcat(cur_word, " P");
+                }
             } else if (player == CN_PLAYER) {
                 cur_word = malloc(sizeof(char) * strlen(elem->word) + 1);
                 strcpy(cur_word, elem->word);

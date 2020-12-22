@@ -14,7 +14,7 @@ size_t ml_len;
 char *welcome_msg = "\nConnected to telnet games server\n\n";
 char *lobby_msg = "\nPick the lobby you wish to join by number, or type n,<lobby name> to start a new lobby\n";
 char *cn_start_msg = "Codenames is a game about guessing words, you can either be a spymaster or a player. Each team has one spymaster and many players. The spymaster can see the card's word and what type of card it is, the players can only see the word. Spymasters give their team a guess consisting of one word and a number ranging from 1 through 9 to give them a clue on which cards to pick. This guess cannot include a word on the board. Players then must reach a consensus on which card to flip over, if the card's type matches your team type (B, R) then your team score is deducted by one, if it's the opposite player's card their score is deducted by one and your team's turn ends. If the card is an innocent bystander (BY) then your team's turn ends and nobody scores. If the card is an assassin (A) then your team automatically loses. The team with the lowest score wins.\n";
-char *cn_pick_player_msg = "Enter 1 for player, 2 for spymaster then enter when ready\n";
+char *cn_pick_player_msg = "Enter 1,R to enter as a red player, 2,R for red spymaster, replace B with R for the blue team.\n";
 char *cn_retry_msg = "Invalid input, please retry...\n";
 char *cn_player_turn_msg = "Lines entered will be transmitted to your teammates, when you are ready to guess type an exclamation point (!) before a single word and press enter. Once a consensus is reached that word will be your team's guess. To stop guessing your team must reach consensus on !!\n";
 char *cn_spymaster_turn_msg = "Enter in a word comma a digit (1-9) and then press enter to send your team a clue on which word to guess\n";
@@ -22,6 +22,7 @@ char *cn_waiting_turn_msg = "While you wait for your team's turn, you can type m
 char *cn_guess_recieved_msg = "Your guess has been recieved, it currently is: ";
 char *cn_new_clue = "The spymaster clue is: ";
 char *cn_invalid_guess_msg = "Invalid guess, please write your guess exactly as it appears in the grid above\n";
+char *cn_spymaster_rej_msg = "Sorry, there's already a spymaster for that team\n";
 
 char *get_lobby_list_str() {
     return NULL;
@@ -148,23 +149,44 @@ void codenames_states(struct player *new_player, char *buf) {
                     return;
                 }
             }
-            // TODO: pick blue or red team, only allow 1 spymaster per team
+            // pick blue or red team, only allow 1 spymaster per team
             if (buf != NULL) {
-                if (strcmp(buf, "1") == 0) {
+                char type = '\x00', team = '\x00';
+                uint8_t err = 0;
+                sscanf(buf, "%c,%c", &type, &team);
+
+                if (team == 'R') {
+                    new_player->team = CN_RED_TEAM;
+                } else if (team == 'B') {
+                    new_player->team = CN_BLUE_TEAM;
+                } else {
+                    err = 1;
+                }
+
+                if (type == '1') {
                     new_player->player_type = CN_PLAYER;
-                    new_checkpt = CN_PRINT_BOARD;
-                } else if (strcmp(buf, "2") == 0) {
+                } else if (type == '2') {
+                    // check if other people are spymaster
+                    for (uint32_t i = 0; i < lobby->player_len; i++) {
+                        if (lobby->player[i]->player_type == CN_SPYMASTER &&
+                            lobby->player[i]->team == new_player->team) {
+                            err = 2;
+                        }
+                    }
                     new_player->player_type = CN_SPYMASTER;
+                } else {
+                    err = 1;
+                }
+
+                if (err == 0) {
                     new_checkpt = CN_PRINT_BOARD;
                 } else {
-                    if (write_str2(socket, cn_retry_msg, id, lobby) < 0) {
+                    if (write_str2(socket, err == 2 ? cn_spymaster_rej_msg : cn_retry_msg, id, lobby) < 0) {
                         return;
                     }
                 }
                 
-                
                 lobby->turn = CN_RED_TEAM;
-                new_player->team = CN_RED_TEAM;
             }
             break;
         case CN_PRINT_BOARD:
@@ -291,8 +313,8 @@ void codenames_game_rules(struct lobby *lobby) {
             write_str2(p->socket, lobby->cur_clue, p->id, lobby);
             write_str2(p->socket, "\n", p->id, lobby);
         }
-        // check player consensus   
-        if (guess_consensus == 0 && p->player_type == CN_PLAYER) {
+        // check player consensus
+        if (guess_consensus == 0 && p->player_type == CN_PLAYER && p->team == lobby->turn) {
             if (consensus == NULL && p->cur_guess != NULL) {
                 consensus = p->cur_guess;
             }
@@ -307,6 +329,7 @@ void codenames_game_rules(struct lobby *lobby) {
 
     // runs when there is a consensus among players
     if (guess_consensus == 0 && consensus != NULL) {
+        printf("GUESS CONSENSUS\n");
         uint8_t game_ends = 0;
         // move to the next turn
         free(lobby->cur_clue);
@@ -410,6 +433,7 @@ void matchmaking_states(struct player *p, char *buf) {
                 } else {
                     write_str(p->socket, cn_retry_msg);
                 }
+                free(lobby_name);
             }
             break;
         case LOBBY_PROMPT:
@@ -417,6 +441,7 @@ void matchmaking_states(struct player *p, char *buf) {
                 write_str(p->socket, "Joining game...\n");
             }
             p->game = CN_GAME;
+            p->player_type = 255;
             // add player to lobby
             add_player(p->lobby, p);
             new_checkpt = CN_START;
