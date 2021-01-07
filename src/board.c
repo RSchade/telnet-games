@@ -71,7 +71,7 @@ char *get_board_str(struct cn_board *in_board, uint8_t player) {
     uint32_t board_len = 0;
     for (uint8_t i = 0; i < r; i++) {
         board_len = update_board_len(&board_size, (grid_len * 2) + 2, &board);
-        sprintf(board + board_len, "+%s+\n%s\n", pluses, blank_row);
+        sprintf(board + board_len, "+%s+\r\n%s\r\n", pluses, blank_row);
         for (uint8_t j = 0; j < c; j++) {
             board_len = update_board_len(&board_size, grid_len + 1, &board);
             struct cn_board_elem *elem = in_board->grid[i][j];
@@ -90,7 +90,7 @@ char *get_board_str(struct cn_board *in_board, uint8_t player) {
                 cur_word = malloc(sizeof(char) * strlen(elem->word) + 1);
                 strcpy(cur_word, elem->word);
             } else {
-                printf("Invalid player type %d\n", player);
+                printf("Invalid player type %d\r\n", player);
             }
             size_t pad_width = (max_width - strlen(cur_word)) + 2;
             char *l = repeat_char(' ', pad_width / 2);
@@ -101,7 +101,7 @@ char *get_board_str(struct cn_board *in_board, uint8_t player) {
             free(r);
         }
         board_len = update_board_len(&board_size, (grid_len * 2) + 2, &board);
-        sprintf(board + board_len, "|\n%s\n", blank_row);
+        sprintf(board + board_len, "|\r\n%s\r\n", blank_row);
     }
     board_len = update_board_len(&board_size, grid_len + 1, &board);
     sprintf(board + board_len, "+%s+", pluses);
@@ -116,7 +116,7 @@ size_t populate_master_list(char ***in) {
     char *buf = malloc(buf_size * sizeof(char));
     FILE *f = fopen("wordlist.csv", "r");
     if (f == NULL && errno != 0) {
-        printf("Error opening master list file\n%s\n", strerror(errno));
+        printf("Error opening master list file\r\n%s\r\n", strerror(errno));
         // TODO: quit?
         return -1;
     }

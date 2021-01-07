@@ -9,7 +9,7 @@ void remove_disc_players(struct lobby *lobby, uint8_t del_player) {
     struct player **players = lobby->player;
     for(long i = 0; i < lobby->player_len; i++) {
         if (players[i]->disc == 1) {
-            printf("Removing id from lobby %s\n", players[i]->id);
+            printf("Removing id from lobby %s\r\n", players[i]->id);
             if (del_player > 0) {
                 free(players[i]->name);
                 free(players[i]->id);
@@ -49,7 +49,7 @@ struct player *get_player(struct lobby *lobby, char *id) {
 char *get_lobby_str(struct lobby *lobby) {
     size_t str_size = 30;
     char *out = calloc(str_size, sizeof(char*) * str_size);
-    sprintf(out, "Lobby '%s':\n", lobby->name);
+    sprintf(out, "Lobby '%s':\r\n", lobby->name);
     for (size_t i = 0; i < lobby->player_len; i++) {
         size_t added_size = strlen(lobby->player[i]->name + 2);
         size_t cur_size = strlen(out);

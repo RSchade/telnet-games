@@ -11,21 +11,21 @@ uint32_t lobby_len = 0;
 char **master_list;
 size_t ml_len;
 
-char *welcome_msg = "\nConnected to telnet games server\n\n";
-char *lobby_name_msg = "Enter your name and press enter, maximum 10 characters\n";
-char *lobby_msg = "\nPick the lobby you wish to join by number, or type n,<lobby name> to start a new lobby\n";
-char *cn_start_msg = "Codenames is a game about guessing words, you can either be a spymaster or a player. Each team has one spymaster and many players. The spymaster can see the card's word and what type of card it is, the players can only see the word. Spymasters give their team a guess consisting of one word and a number ranging from 1 through 9 to give them a clue on which cards to pick. This guess cannot include a word on the board. Players then must reach a consensus on which card to flip over, if the card's type matches your team type (B, R) then your team score is deducted by one, if it's the opposite player's card their score is deducted by one and your team's turn ends. If the card is an innocent bystander (BY) then your team's turn ends and nobody scores. If the card is an assassin (A) then your team automatically loses. The team with the lowest score wins.\n";
-char *cn_pick_player_msg = "Enter 1,R to enter as a red player, 2,R for red spymaster, replace B with R for the blue team.\n";
-char *cn_retry_msg = "Invalid input, please retry...\n";
-char *cn_player_turn_msg = "Lines entered will be transmitted to your teammates, when you are ready to guess type an exclamation point (!) before a single word and press enter. Once a consensus is reached that word will be your team's guess. To stop guessing your team must reach consensus on !!\n";
-char *cn_spymaster_turn_msg = "Enter in a word comma a digit (1-9) and then press enter to send your team a clue on which word to guess\n";
-char *cn_waiting_turn_msg = "While you wait for your team's turn, you can type messages to your teammates\n";
+char *welcome_msg = "\r\nConnected to telnet games server\r\n\r\n";
+char *lobby_name_msg = "Enter your name and press enter, maximum 10 characters\r\n";
+char *lobby_msg = "\r\nPick the lobby you wish to join by number, or type n,<lobby name> to start a new lobby\r\n";
+char *cn_start_msg = "Codenames is a game about guessing words, you can either be a spymaster or a player. Each team has one spymaster and many players. The spymaster can see the card's word and what type of card it is, the players can only see the word. Spymasters give their team a guess consisting of one word and a number ranging from 1 through 9 to give them a clue on which cards to pick. This guess cannot include a word on the board. Players then must reach a consensus on which card to flip over, if the card's type matches your team type (B, R) then your team score is deducted by one, if it's the opposite player's card their score is deducted by one and your team's turn ends. If the card is an innocent bystander (BY) then your team's turn ends and nobody scores. If the card is an assassin (A) then your team automatically loses. The team with the lowest score wins.\r\n";
+char *cn_pick_player_msg = "Enter 1,R to enter as a red player, 2,R for red spymaster, replace B with R for the blue team.\r\n";
+char *cn_retry_msg = "Invalid input, please retry...\r\n";
+char *cn_player_turn_msg = "Lines entered will be transmitted to your teammates, when you are ready to guess type an exclamation point (!) before a single word and press enter. Once a consensus is reached that word will be your team's guess. To stop guessing your team must reach consensus on !!\r\n";
+char *cn_spymaster_turn_msg = "Enter in a word comma a digit (1-9) and then press enter to send your team a clue on which word to guess\r\n";
+char *cn_waiting_turn_msg = "While you wait for your team's turn, you can type messages to your teammates\r\n";
 char *cn_guess_recieved_msg = "Your guess has been recieved, it currently is: ";
 char *cn_new_clue = "The spymaster clue is: ";
-char *cn_invalid_guess_msg = "Invalid guess, please write your guess exactly as it appears in the grid above\n";
-char *cn_spymaster_rej_msg = "Sorry, there's already a spymaster for that team\n";
-char *cn_red_team_win_msg = "Congratulations red team, you have won this game!\n";
-char *cn_blue_team_win_msg = "Congratulations blue team, you have won this game!\n";
+char *cn_invalid_guess_msg = "Invalid guess, please write your guess exactly as it appears in the grid above\r\n";
+char *cn_spymaster_rej_msg = "Sorry, there's already a spymaster for that team\r\n";
+char *cn_red_team_win_msg = "Congratulations red team, you have won this game!\r\n";
+char *cn_blue_team_win_msg = "Congratulations blue team, you have won this game!\r\n";
 
 ssize_t write_str2(int socket, char *buf, char *id, struct lobby *l) {
     ssize_t out = write_str(socket, buf);
@@ -57,12 +57,12 @@ int8_t print_board_state(struct lobby *lobby, struct player *player) {
     char *board = get_board_str(lobby->board, player->player_type);
     char *id = player->id;
     char *top = calloc(sizeof(char), 100); // TODO: exact size?
-    sprintf(top, "%s, %s, %dr - %db\n", player->team == CN_RED_TEAM ? "Red Team" : "Blue Team", 
+    sprintf(top, "%s, %s, %dr - %db\r\n", player->team == CN_RED_TEAM ? "Red Team" : "Blue Team", 
                                  player->team == lobby->turn ? "Your Team's Turn" : "Their Team's Turn",
                                  lobby->rt_score, lobby->bt_score);
     ssize_t err = write_str2(socket, top, id, lobby);
     err |= write_str2(socket, board, id, lobby);
-    err |= write_str2(socket, "\n", id, lobby);
+    err |= write_str2(socket, "\r\n", id, lobby);
     free(top);
     if (err < 0) {
         return -1;
@@ -94,11 +94,11 @@ int8_t player_guess(struct lobby *lobby, struct player *player, char *buf) {
         player->cur_guess = guess;
         ssize_t err = write_str2(socket, cn_guess_recieved_msg, id, lobby);
         err |= write_str2(socket, guess, id, lobby);
-        err |= write_str2(socket, "\n", id, lobby);
+        err |= write_str2(socket, "\r\n", id, lobby);
         if (err < 0) {
             return -1;
         }
-        printf("Guess: %s\n", player->cur_guess);
+        printf("Guess: %s\r\n", player->cur_guess);
     }
     return 0;
 }
@@ -228,7 +228,7 @@ void codenames_states(struct player *new_player, char *buf) {
                     chat_flag = 1;
                 }
             } else {
-                printf("Invalid player type %d!\n", new_player->player_type);
+                printf("Invalid player type %d!\r\n", new_player->player_type);
             }
             break;
         case CN_NOT_YOUR_TURN:
@@ -241,7 +241,7 @@ void codenames_states(struct player *new_player, char *buf) {
             chat_flag = 1;
             break;
         case CN_GAME_END:
-            printf("Lobby ended\n");
+            printf("Lobby ended\r\n");
             write_str2(socket, lobby->winning_team == CN_RED_TEAM ? 
                 cn_red_team_win_msg : cn_blue_team_win_msg, id, lobby);
             // disconnect the player
@@ -249,7 +249,7 @@ void codenames_states(struct player *new_player, char *buf) {
             disc_socket(socket);
             break;
         default:
-            printf("Invalid checkpoint %d!\n", checkpt);
+            printf("Invalid checkpoint %d!\r\n", checkpt);
             break;
     }
 
@@ -293,7 +293,7 @@ void codenames_game_rules(struct lobby *lobby) {
                     strcat(full_chat, p->name);
                     strcat(full_chat, ": ");
                     strcat(full_chat, p->chat_buffer);
-                    strcat(full_chat, "\n");
+                    strcat(full_chat, "\r\n");
                     if (write_str2(p2->socket, full_chat, p2->id, lobby) < 0) {
                         j--;
                         free(full_chat);
@@ -309,7 +309,7 @@ void codenames_game_rules(struct lobby *lobby) {
         if ((lobby->update_flag & CN_CLUE_UPDATE) > 0) {
             write_str2(p->socket, cn_new_clue, p->id, lobby);
             write_str2(p->socket, lobby->cur_clue, p->id, lobby);
-            write_str2(p->socket, "\n", p->id, lobby);
+            write_str2(p->socket, "\r\n", p->id, lobby);
         }
         // check player consensus
         if (guess_consensus == 0 && p->player_type == CN_PLAYER && p->team == lobby->turn) {
@@ -327,7 +327,7 @@ void codenames_game_rules(struct lobby *lobby) {
 
     // runs when there is a consensus among players
     if (guess_consensus == 0 && consensus != NULL) {
-        printf("GUESS CONSENSUS\n");
+        printf("GUESS CONSENSUS\r\n");
         uint8_t game_ends = 0;
         // move to the next turn
         free(lobby->cur_clue);
@@ -363,7 +363,7 @@ void codenames_game_rules(struct lobby *lobby) {
                 lobby->winning_team = lobby->turn == CN_RED_TEAM ? CN_BLUE_TEAM : CN_RED_TEAM;
                 lobby->update_flag |= CN_ASSASSIN_LOSS;
             } else {
-                printf("Invalid board state %d\n", be->state);
+                printf("Invalid board state %d\r\n", be->state);
             }
 
             if (lobby->rt_score == 0) {
@@ -461,7 +461,7 @@ void matchmaking_states(struct player *p, char *buf) {
             break;
         case LOBBY_PROMPT:
             if (p->prev_checkpt != p->checkpt) {
-                write_str(p->socket, "Joining game...\n");
+                write_str(p->socket, "Joining game...\r\n");
             }
             p->game = CN_GAME;
             p->player_type = 255;
@@ -512,22 +512,22 @@ void player_event_loop() {
         uint8_t first = 0;
         while ((current_player->disc == 0 && current_player->checkpt != current_player->prev_checkpt) || first == 0) {
             first = 1;
-            printf("STATE\n");
+            //printf("STATE\r\n");
             int socket = current_player->socket;
             char *buf;
 
             ssize_t read_len = read_str(socket, &buf);
 
             if (read_len <= -1) {
-                printf("Could not read from %s\n", current_player->id);
+                printf("Could not read from %s\r\n", current_player->id);
                 current_player->disc = 1;
                 continue;
             }
             
-            if (read_len > 0) {
-                buf[read_len - 1] = '\x00'; // TODO: test with \n and \r\n
+            if (read_len > 1) {
+                buf[read_len - 1] = '\x00'; // TODO: test with \r\n and \r\r\n
                 buf[read_len - 2] = '\x00';
-                printf("Recieved from %s: %s\n", current_player->id, buf);
+                printf("Recieved from %s: %s\r\n", current_player->id, buf);
             } else {
                 free(buf);
                 buf = NULL;
@@ -539,7 +539,7 @@ void player_event_loop() {
             } else if (current_player->game == CN_GAME) {
                 codenames_states(current_player, buf);
             } else {
-                printf("INVALID GAME %d\n", current_player->game);
+                printf("INVALID GAME %d\r\n", current_player->game);
             }
 
             if (buf != NULL) {
@@ -586,7 +586,7 @@ void event_loop() {
 }
 
 void int_handler() {
-    printf("Cleaning up...\n");
+    printf("Cleaning up...\r\n");
     for (size_t i = 0; i < ml_len; i++) {
         free(master_list[i]);
     }

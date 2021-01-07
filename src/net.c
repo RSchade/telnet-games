@@ -52,19 +52,19 @@ void socket_poll() {
     open_socks[0].events = sock_events;
     nfds++;
 
-    unsigned long n = 0;
+    //unsigned long n = 0;
 
     while (1) {
         // wait until something happens
         poll(open_socks, nfds, 10000);
-        printf("REFRESH %ld %ld\n", n, nfds);
+        //printf("REFRESH %ld %ld\r\n", n, nfds);
         // check for new connection
         new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
         uint8_t e_again = new_socket < 0 && errno == (EAGAIN | EWOULDBLOCK);
         if (!e_again) {
             fcntl(new_socket, F_SETFL, O_NONBLOCK);
             if (nfds_size == nfds) {
-                printf("INCREASE POLLFD SOCK SIZE FROM %ld TO %ld\n", nfds_size, nfds_size + 5);
+                printf("INCREASE POLLFD SOCK SIZE FROM %ld TO %ld\r\n", nfds_size, nfds_size + 5);
                 nfds_size += 5;
                 open_socks = realloc(open_socks, sizeof(struct pollfd) * nfds_size);
             }
@@ -72,20 +72,20 @@ void socket_poll() {
             open_socks[nfds].events = sock_events;
             nfds++;
             char *ip = inet_ntoa(client.sin_addr);
-            printf("Connection accepted from %s on port %d\n", ip, client.sin_port);
+            printf("Connection accepted from %s on port %d\r\n", ip, client.sin_port);
             char *id = malloc(sizeof(char) * (strlen(ip) + 7));
             sprintf(id, "%s:%d", ip, client.sin_port);
             new_user(new_socket, id, client);
         }
         // run the event loop
         event_loop();
-        n++;
+        //n++;
     }
 }
 
 void remove_socket(int socket) {
     // handle nfds deductions
-    printf("SOCKET %d DISCONNECTED... REMOVING\n", socket);
+    printf("SOCKET %d DISCONNECTED... REMOVING\r\n", socket);
     for (nfds_t i = 0; i < nfds; i++) {
         if (open_socks[i].fd == socket) {
             // take out of the array,
@@ -103,7 +103,7 @@ void remove_socket(int socket) {
 ssize_t write_str(int socket, char *buf) {
     ssize_t written = write(socket, buf, strlen(buf));
     if (written == -1) {
-        printf("Write failed with error:\n%s\n", strerror(errno));
+        printf("Write failed with error:\r\n%s\r\n", strerror(errno));
         if (errno == EPIPE) {
             remove_socket(socket);
         }
