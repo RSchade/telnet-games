@@ -4,29 +4,35 @@
 #include <unistd.h>
 #include "lobby.h"
 
+void remove_disc_players(struct lobby *lobby, uint8_t del_player) {
+    uint8_t change = 0;
+    struct player **players = lobby->player;
+    for(long i = 0; i < lobby->player_len; i++) {
+        if (players[i]->disc == 1) {
+            printf("Removing id from lobby %s\n", players[i]->id);
+            if (del_player > 0) {
+                free(players[i]->name);
+                free(players[i]->id);
+                free(players[i]);
+            }
+            for(size_t j = i; j < lobby->player_len - 1; j++) {
+                players[j] = players[j + 1];
+            }
+            i--;
+            lobby->player_len--;
+            change = 0;
+        }
+    }
+    if (change == 1) {
+        lobby->player = realloc(lobby->player, 
+            lobby->player_len * sizeof(struct player *));
+    }
+}
+
 void add_player(struct lobby *lobby, struct player *new_p) {
     lobby->player_len += 1;
     lobby->player = realloc(lobby->player, sizeof(struct player*) * lobby->player_len);
     lobby->player[lobby->player_len - 1] = new_p;
-}
-
-void remove_player(struct lobby *lobby, char *id, int8_t del) {
-    // take the end and put it in the middle
-    for (size_t i = 0; i < lobby->player_len; i++) {
-        if (strcmp(lobby->player[i]->id, id) == 0) {
-            if (i != lobby->player_len - 1) {
-                // take the end and put it here
-                lobby->player[i] = lobby->player[lobby->player_len - 1];
-            }
-            lobby->player_len--;
-            if (del > 0) {
-                struct player *p = lobby->player[i];
-                close(p->socket);
-                // TODO: add more frees for the inner pieces of data
-                free(p);
-            }
-        }
-    }
 }
 
 struct player *get_player(struct lobby *lobby, char *id) {

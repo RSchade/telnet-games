@@ -16,6 +16,7 @@ struct lobby {
     uint8_t bt_score;
     char *cur_clue;
     uint8_t update_flag;
+    uint8_t winning_team;
 };
 
 struct player {
@@ -39,7 +40,7 @@ struct player {
 
 char *get_lobby_str(struct lobby *lobby);
 struct player *get_player(struct lobby *lobby, char *id);
-void remove_player(struct lobby *lobby, char *id, int8_t del);
 void add_player(struct lobby *lobby, struct player *new_p);
+void remove_disc_players(struct lobby *lobby, uint8_t del_player);
 
 #endif

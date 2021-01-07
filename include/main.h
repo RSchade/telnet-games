@@ -27,9 +27,11 @@
 
 #define CN_CLUE_UPDATE 1
 #define CN_ASSASSIN_LOSS 2
+#define CN_GAME_ENDED 4
 
-#define LOBBY_DECIDE 0
-#define LOBBY_PROMPT 1
+#define LOBBY_NAME 0
+#define LOBBY_DECIDE 1
+#define LOBBY_PROMPT 2
 
 #define BEGIN 0
 #define CN_GAME 1

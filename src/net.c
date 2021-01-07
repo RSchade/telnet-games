@@ -138,6 +138,11 @@ ssize_t read_str(int socket, char **buf) {
     return read_len;
 }
 
+void disc_socket(int socket) {
+    remove_socket(socket);
+    close(socket);
+}
+
 void close_sock() {
     close(socket_desc);
 }

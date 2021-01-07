@@ -12,6 +12,7 @@ char **master_list;
 size_t ml_len;
 
 char *welcome_msg = "\nConnected to telnet games server\n\n";
+char *lobby_name_msg = "Enter your name and press enter, maximum 10 characters\n";
 char *lobby_msg = "\nPick the lobby you wish to join by number, or type n,<lobby name> to start a new lobby\n";
 char *cn_start_msg = "Codenames is a game about guessing words, you can either be a spymaster or a player. Each team has one spymaster and many players. The spymaster can see the card's word and what type of card it is, the players can only see the word. Spymasters give their team a guess consisting of one word and a number ranging from 1 through 9 to give them a clue on which cards to pick. This guess cannot include a word on the board. Players then must reach a consensus on which card to flip over, if the card's type matches your team type (B, R) then your team score is deducted by one, if it's the opposite player's card their score is deducted by one and your team's turn ends. If the card is an innocent bystander (BY) then your team's turn ends and nobody scores. If the card is an assassin (A) then your team automatically loses. The team with the lowest score wins.\n";
 char *cn_pick_player_msg = "Enter 1,R to enter as a red player, 2,R for red spymaster, replace B with R for the blue team.\n";
@@ -23,18 +24,12 @@ char *cn_guess_recieved_msg = "Your guess has been recieved, it currently is: ";
 char *cn_new_clue = "The spymaster clue is: ";
 char *cn_invalid_guess_msg = "Invalid guess, please write your guess exactly as it appears in the grid above\n";
 char *cn_spymaster_rej_msg = "Sorry, there's already a spymaster for that team\n";
-
-char *get_lobby_list_str() {
-    return NULL;
-}
+char *cn_red_team_win_msg = "Congratulations red team, you have won this game!\n";
+char *cn_blue_team_win_msg = "Congratulations blue team, you have won this game!\n";
 
 ssize_t write_str2(int socket, char *buf, char *id, struct lobby *l) {
     ssize_t out = write_str(socket, buf);
     if (out == -1 && errno == EPIPE) {
-        // remove from lobby (this may cause more issues than it solves?)
-        //remove_player(l, id, 0);
-        //remove_player(&master_lobby, id, 1);
-
         // flag player as disconnected, this will
         // cause the rest of the logic to skip that player
         // (until they reconnect)
@@ -246,9 +241,12 @@ void codenames_states(struct player *new_player, char *buf) {
             chat_flag = 1;
             break;
         case CN_GAME_END:
-            printf("Game ended... %d\n", lobby->update_flag);
-            // TODO: game end text
-            // TODO: boot players off server? or back into main lobby?
+            printf("Lobby ended\n");
+            write_str2(socket, lobby->winning_team == CN_RED_TEAM ? 
+                cn_red_team_win_msg : cn_blue_team_win_msg, id, lobby);
+            // disconnect the player
+            new_player->disc = 1;
+            disc_socket(socket);
             break;
         default:
             printf("Invalid checkpoint %d!\n", checkpt);
@@ -362,9 +360,20 @@ void codenames_game_rules(struct lobby *lobby) {
             } else if (be->state & CN_BOARD_ASSASSIN) {
                 // game ends, current team loses
                 game_ends = 1;
+                lobby->winning_team = lobby->turn == CN_RED_TEAM ? CN_BLUE_TEAM : CN_RED_TEAM;
                 lobby->update_flag |= CN_ASSASSIN_LOSS;
             } else {
                 printf("Invalid board state %d\n", be->state);
+            }
+
+            if (lobby->rt_score == 0) {
+                lobby->winning_team = CN_RED_TEAM;
+                game_ends = 1;
+            }
+
+            if (lobby->bt_score == 0) {
+                lobby->winning_team = CN_BLUE_TEAM;
+                game_ends = 1;
             }
         }
         for (size_t i = 0; i < lobby->player_len; i++) {
@@ -377,6 +386,7 @@ void codenames_game_rules(struct lobby *lobby) {
             // reprint boards for everyone
             if (game_ends) {
                 p->checkpt = CN_GAME_END;
+                lobby->update_flag |= CN_GAME_ENDED;
             } else {
                 p->checkpt = CN_PRINT_BOARD;
             }
@@ -402,6 +412,19 @@ void matchmaking_states(struct player *p, char *buf) {
     uint8_t new_checkpt = p->checkpt;
 
     switch(p->checkpt) {
+        case LOBBY_NAME:
+            if (p->prev_checkpt != p->checkpt) {
+                write_str(p->socket, lobby_name_msg);
+                p->name = malloc(sizeof(char) * 11);
+            }
+            if (buf != NULL) {
+                if (sscanf(buf, "%10s", p->name) > 0) {
+                    new_checkpt = LOBBY_DECIDE;
+                } else {
+                    write_str(p->socket, cn_retry_msg);
+                }
+            }
+            break;
         case LOBBY_DECIDE:
             if (p->prev_checkpt != p->checkpt) {
                 write_str(p->socket, welcome_msg);
@@ -466,9 +489,7 @@ void new_user(int new_socket, char *client_id, struct sockaddr_in addr) {
     if (client_player == NULL) {
         struct player *p = malloc(sizeof(struct player));
         p->id = client_id;
-        char *id2 = calloc(strlen(client_id) + 1, sizeof(char));
-        strcpy(id2, client_id);
-        p->name = id2;
+        p->name = NULL;
         p->addr = addr;
         p->socket = new_socket;
         p->checkpt = 0;
@@ -480,13 +501,6 @@ void new_user(int new_socket, char *client_id, struct sockaddr_in addr) {
         p->game = BEGIN;
         add_player(&master_lobby, p);
     }
-
-    /*
-    struct lobby player_lobby = lobbys[0];
-    char *lobby_str = get_lobby_str(&player_lobby);
-    write_str(new_socket, lobby_str);
-    free(lobby_str);
-    */
 }
 
 void player_event_loop() {
@@ -504,11 +518,9 @@ void player_event_loop() {
 
             ssize_t read_len = read_str(socket, &buf);
 
-            if (read_len == -1) {
+            if (read_len <= -1) {
                 printf("Could not read from %s\n", current_player->id);
                 current_player->disc = 1;
-                // remove_player(current_player->lobby, current_player->id, 0);
-                // remove_player(&master_lobby, current_player->id, 1);
                 continue;
             }
             
@@ -545,7 +557,25 @@ void bg_event_loop() {
 }
 
 void cleanup_lobbys() {
-    // TODO: clean up disconnected people out of the lobbys
+    // clean up disconnected people out of the lobbys
+    remove_disc_players(&master_lobby, 0);
+    for (size_t i = 0; i < lobby_len; i++) {
+        remove_disc_players(&lobbys[i], 1);
+    }
+    // remove lobbys from the list that have ended
+    uint8_t change = 0;
+    for (long i = 0; i < lobby_len; i++) {
+        if ((lobbys[i].update_flag & CN_GAME_ENDED) > 0) {
+            for (size_t j = i; j < lobby_len - 1; j++) {
+                lobbys[j] = lobbys[j + 1];
+            }
+            i--;
+            lobby_len--;
+        }
+    }
+    if (change == 1) {
+        lobbys = realloc(lobbys, lobby_len * sizeof(struct player));
+    }
 }
 
 void event_loop() {
