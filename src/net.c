@@ -17,7 +17,7 @@ int socket_init() {
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(8888);
+	server.sin_port = htons(8080);
 	
 	//Bind
 	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
@@ -45,7 +45,7 @@ nfds_t nfds_size = 1;
 void socket_poll() {
     int c, new_socket;
     c = sizeof(struct sockaddr_in);
-    short sock_events = POLLIN | POLLOUT | POLLHUP; // TODO: maybe refeshing too much
+    short sock_events = POLLIN | POLLHUP;
 
     open_socks = calloc(sizeof(struct pollfd), nfds_size);
     open_socks[0].fd = socket_desc;
@@ -56,8 +56,8 @@ void socket_poll() {
 
     while (1) {
         // wait until something happens
-        poll(open_socks, nfds, 5000);
-        // printf("REFRESH %ld %ld\n", n, nfds);
+        poll(open_socks, nfds, 10000);
+        printf("REFRESH %ld %ld\n", n, nfds);
         // check for new connection
         new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
         uint8_t e_again = new_socket < 0 && errno == (EAGAIN | EWOULDBLOCK);
@@ -83,28 +83,59 @@ void socket_poll() {
     }
 }
 
+void remove_socket(int socket) {
+    // handle nfds deductions
+    printf("SOCKET %d DISCONNECTED... REMOVING\n", socket);
+    for (nfds_t i = 0; i < nfds; i++) {
+        if (open_socks[i].fd == socket) {
+            // take out of the array,
+            // move everything back over this to 'cover up'
+            // the invalid record
+            for (nfds_t j = i; j < nfds - 1; j++) {
+                open_socks[j] = open_socks[j + 1];
+            }
+            nfds--;
+            break;
+        }
+    }
+}
+
 ssize_t write_str(int socket, char *buf) {
     ssize_t written = write(socket, buf, strlen(buf));
     if (written == -1) {
         printf("Write failed with error:\n%s\n", strerror(errno));
         if (errno == EPIPE) {
-            // handle nfds deductions
-            printf("SOCKET %d DISCONNECTED... REMOVING\n", socket);
-            for (nfds_t i = 0; i < nfds; i++) {
-                if (open_socks[i].fd == socket) {
-                    // take out of the array,
-                    // move everything back over this to 'cover up'
-                    // the invalid record
-                    for (nfds_t j = i; j < nfds - 1; j++) {
-                        open_socks[j] = open_socks[j + 1];
-                    }
-                    nfds--;
-                    break;
-                }
-            }
+            remove_socket(socket);
         }
     }
     return written;
+}
+
+ssize_t read_str(int socket, char **buf) {
+    // recieve bytes from the client
+    ssize_t buf_size = 10;
+    ssize_t read_len = 0;
+    *buf = malloc(sizeof(char) * buf_size);
+    uint8_t e_again = 0;
+    while (!e_again) {
+        ssize_t size_read = read(socket, *buf + read_len, buf_size - read_len);
+        if (size_read > 0) {
+            read_len += size_read;
+            buf_size *= 2;
+            *buf = realloc(*buf, buf_size);
+            for (ssize_t i = read_len; i < buf_size; i++) {
+                (*buf)[i] = '\x00';
+            }
+        } else {
+            e_again = (errno & (EAGAIN | EWOULDBLOCK)) > 0;
+            if (size_read == 0) {
+                remove_socket(socket);
+                free(*buf);
+                return -1;
+            }
+        }
+    }
+    return read_len;
 }
 
 void close_sock() {

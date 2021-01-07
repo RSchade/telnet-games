@@ -489,71 +489,70 @@ void new_user(int new_socket, char *client_id, struct sockaddr_in addr) {
     */
 }
 
-void event_loop() {
-
+void player_event_loop() {
     for (size_t i = 0; i < master_lobby.player_len; i++) {
         struct player *current_player = master_lobby.player[i];
         if (current_player->disc > 0) {
             continue;
         }
-        int socket = current_player->socket;
+        uint8_t first = 0;
+        while ((current_player->disc == 0 && current_player->checkpt != current_player->prev_checkpt) || first == 0) {
+            first = 1;
+            printf("STATE\n");
+            int socket = current_player->socket;
+            char *buf;
 
-        // recieve bytes from the client
-        ssize_t buf_size = 10;
-        ssize_t read_len = 0;
-        char *buf = malloc(sizeof(char) * buf_size);
-        uint8_t e_again = 0;
-        while (!e_again) {
-            ssize_t size_read = read(socket, buf + read_len, buf_size - read_len);
-            if (size_read > 0) {
-                read_len += size_read;
-                buf_size *= 2;
-                buf = realloc(buf, buf_size);
-                for (ssize_t i = read_len; i < buf_size; i++) {
-                    buf[i] = '\x00';
-                }
-            } else if (size_read == 0) {
-                e_again = 1;
+            ssize_t read_len = read_str(socket, &buf);
+
+            if (read_len == -1) {
+                printf("Could not read from %s\n", current_player->id);
+                current_player->disc = 1;
+                // remove_player(current_player->lobby, current_player->id, 0);
+                // remove_player(&master_lobby, current_player->id, 1);
+                continue;
+            }
+            
+            if (read_len > 0) {
+                buf[read_len - 1] = '\x00'; // TODO: test with \n and \r\n
+                buf[read_len - 2] = '\x00';
+                printf("Recieved from %s: %s\n", current_player->id, buf);
             } else {
-                e_again = errno == (EAGAIN | EWOULDBLOCK);
-                if (errno == EPIPE) {
-                    printf("Could not read from %s\n", current_player->id);
-                    remove_player(current_player->lobby, current_player->id, 0);
-                    remove_player(&master_lobby, current_player->id, 1);
-                    i--;
-                    free(buf);
-                    continue;
-                }
+                free(buf);
+                buf = NULL;
+            }
+
+            // parse input based on player's state
+            if (current_player->game == BEGIN) {
+                matchmaking_states(current_player, buf);
+            } else if (current_player->game == CN_GAME) {
+                codenames_states(current_player, buf);
+            } else {
+                printf("INVALID GAME %d\n", current_player->game);
+            }
+
+            if (buf != NULL) {
+                free(buf);
             }
         }
-        
-        if (read_len > 0) {
-            buf[read_len - 1] = '\x00'; // TODO: test with \n and \r\n
-            buf[read_len - 2] = '\x00';
-            printf("Recieved from %s: %s\n", current_player->id, buf);
-        } else {
-            free(buf);
-            buf = NULL;
-        }
-
-        // parse input based on player's state
-        if (current_player->game == BEGIN) {
-            matchmaking_states(current_player, buf);
-        } else if (current_player->game == CN_GAME) {
-            codenames_states(current_player, buf);
-        } else {
-            printf("INVALID GAME %d\n", current_player->game);
-        }
-
-        if (buf != NULL) {
-            free(buf);
-        }
     }
+}
 
+void bg_event_loop() {
     // run the background game rules
     for (size_t i = 0; i < lobby_len; i++) {
         codenames_game_rules(&lobbys[i]);
     }
+}
+
+void cleanup_lobbys() {
+    // TODO: clean up disconnected people out of the lobbys
+}
+
+void event_loop() {
+    player_event_loop();
+    bg_event_loop();
+    player_event_loop();
+    cleanup_lobbys();
 }
 
 void int_handler() {
