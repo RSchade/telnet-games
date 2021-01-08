@@ -328,12 +328,11 @@ void codenames_game_rules(struct lobby *lobby) {
     // runs when there is a consensus among players
     if (guess_consensus == 0 && consensus != NULL) {
         printf("GUESS CONSENSUS\r\n");
+        uint8_t start_turn = lobby->turn;
         uint8_t game_ends = 0;
         // move to the next turn
         int8_t next_turn = strcmp(consensus, "!") == 0;
         if (next_turn) {
-            free(lobby->cur_clue);
-            lobby->cur_clue = NULL;
             // switch turn
             if (lobby->turn == CN_BLUE_TEAM) {
                 lobby->turn = CN_RED_TEAM;
@@ -376,6 +375,12 @@ void codenames_game_rules(struct lobby *lobby) {
                 game_ends = 1;
             }
         }
+
+        if (lobby->cur_clue != NULL && start_turn != lobby->turn) {
+            free(lobby->cur_clue);
+            lobby->cur_clue = NULL;
+        }
+
         for (size_t i = 0; i < lobby->player_len; i++) {
             struct player *p = lobby->player[i];
             if (p->disc > 0) {
