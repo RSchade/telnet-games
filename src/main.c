@@ -180,8 +180,6 @@ void codenames_states(struct player *new_player, char *buf) {
                         return;
                     }
                 }
-                
-                lobby->turn = CN_RED_TEAM;
             }
             break;
         case CN_PRINT_BOARD:
@@ -410,6 +408,7 @@ struct lobby gen_lobby(char *lobby_name) {
     l.player_len = 0;
     l.update_flag = 0;
     l.board = board;
+    l.turn = CN_RED_TEAM;
     return l;
 }
 
