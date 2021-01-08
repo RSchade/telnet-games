@@ -214,7 +214,7 @@ void codenames_states(struct player *new_player, char *buf) {
                 }
             } else if(new_player->player_type == CN_SPYMASTER) {
                 // initial message spymaster
-                if (prev_checkpt != CN_YOUR_TURN) {
+                if (prev_checkpt != CN_YOUR_TURN && lobby->cur_clue == NULL) {
                     if (write_str2(socket, cn_spymaster_turn_msg, id, lobby) < 0) {
                         return;
                     }
@@ -330,10 +330,10 @@ void codenames_game_rules(struct lobby *lobby) {
         printf("GUESS CONSENSUS\r\n");
         uint8_t game_ends = 0;
         // move to the next turn
-        free(lobby->cur_clue);
         int8_t next_turn = strcmp(consensus, "!") == 0;
-        lobby->cur_clue = NULL;
         if (next_turn) {
+            free(lobby->cur_clue);
+            lobby->cur_clue = NULL;
             // switch turn
             if (lobby->turn == CN_BLUE_TEAM) {
                 lobby->turn = CN_RED_TEAM;
