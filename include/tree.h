@@ -7,7 +7,8 @@
 #include <stdio.h>
 
 struct tree {
-    int8_t height;
+    int8_t lh;
+    int8_t rh;
     void *data;
     char *key;
     struct tree *l;
