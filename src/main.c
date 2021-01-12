@@ -600,11 +600,14 @@ void int_handler() {
 }
 
 int main(int argc, char *argv[]) {
+
+    test();
+/*
     srand(time(0));
     ml_len = populate_master_list(&master_list);
     socket_init();
     signal(SIGINT, int_handler);
     socket_poll(event_loop);
-    // TODO: frees for everything when the server spins down
     return 0;
+*/
 }

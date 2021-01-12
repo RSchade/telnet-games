@@ -11,6 +11,7 @@
 #include "lobby.h"
 #include "board.h"
 #include "net.h"
+#include "tree.h"
 
 #define CN_START 0
 #define CN_PICK_PLAYER_TYPE 1
