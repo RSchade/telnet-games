@@ -10,17 +10,26 @@ struct tree *rotate_l(struct tree *n) {
     b->p = n->p;
     n->p = b;
     struct tree *c = b->r;
+    // get left subtree of b
+    struct tree *temp = b->l;
     // move A to the left of B
     b->l = n;
     // move C to the right of B
     b->r = c;
     // adjust parent
     c->p = b;
-    n->r = NULL;
+    n->r = temp;
     // adjust heights
-    n->rh = 0;
-    b->lh = n->lh + 1;
+    if (temp != NULL) {
+        n->rh = temp->rh + temp->lh + 1;
+    } else {
+        n->rh = 0;
+    }
+    b->lh = n->lh + n->rh;
     b->rh = b->r->rh + b->r->lh + 1;
+    if (b->p != NULL) {
+        b->p->r = b;
+    }
     return b;
 }
 
@@ -30,17 +39,26 @@ struct tree *rotate_r(struct tree *n) {
     b->p = n->p;
     n->p = b;
     struct tree *c = b->l;
+    // get right subtree of b
+    struct tree *temp = b->r;
     // move A to the left of B
     b->r = n;
     // move C to the right of B
     b->l = c;
     // adjust parent
     c->p = b;
-    n->l = NULL;
+    n->l = temp;
     // adjust heights
-    n->lh = 0;
-    b->rh = c->rh;
+    if (temp != NULL) {
+        n->lh = temp->rh + temp->lh + 1;
+    } else {
+        n->lh = 0;
+    }
+    b->rh = n->lh + n->rh;
     b->lh = b->l->rh + b->l->lh + 1;
+    if (b->p != NULL) {
+        b->p->l = b;
+    }
     return b;
 }
 
@@ -61,6 +79,9 @@ struct tree *rotate_lr(struct tree *n) {
     b->l->rh = 0;
     b->rh = n->rh + 1;
     b->lh = b->l->lh + 1;
+    if (b->p != NULL) {
+        b->p->r = b;
+    }
     return b;
 }
 
@@ -81,6 +102,9 @@ struct tree *rotate_rl(struct tree *n) {
     b->r->lh = 0;
     b->lh = n->lh + 1;
     b->rh = b->r->rh + 1;
+    if (b->p != NULL) {
+        b->p->l = b;
+    }
     return b;
 }
 
@@ -139,8 +163,8 @@ struct tree *avl_add(struct tree *t, char *key, void *data) {
         printf("lh: %d rh: %d\n", l, r);
         int8_t h = l - r;
         printf("h = %d ", h);
-        if (h == 2) {
-            if (n->l->r != NULL) {
+        if (h >= 2) {
+            if (n->l->r != NULL && n->l->l == NULL) {
                 // left right rotation
                 printf("LR ROTATE\n ");
                 n = rotate_lr(n);
@@ -149,8 +173,8 @@ struct tree *avl_add(struct tree *t, char *key, void *data) {
                 printf("R ROTATE\n ");
                 n = rotate_r(n);
             }
-        } else if (h == -2) {
-            if (n->r->l != NULL) {
+        } else if (h <= -2) {
+            if (n->r->l != NULL && n->r->r == NULL) {
                 // right left rotation
                 printf("RL ROTATE\n ");
                 n = rotate_rl(n);
@@ -163,6 +187,7 @@ struct tree *avl_add(struct tree *t, char *key, void *data) {
         if (n->p == NULL) {
             t = n;
         }
+        printf("KEY: %s ", n->key);
         n = n->p;
     }
     printf("\nREBALANCE DONE\n\n\n\n");
@@ -187,12 +212,11 @@ struct tree *avl_make(char *key, void *data) {
 }
 
 void test() {
-    struct tree *t = avl_make("a", NULL);
+    struct tree *t = avl_make("c", NULL);
+    t = avl_add(t, "a", NULL);
     t = avl_add(t, "b", NULL);
-    t = avl_add(t, "c", NULL);
     t = avl_add(t, "d", NULL);
     t = avl_add(t, "e", NULL);
-    t = avl_add(t, "f", NULL);
 
-    printf("  %s\n%s   %s\n", t->key, t->l->key, t->r->key);
+    printf("DONE\n");
 }

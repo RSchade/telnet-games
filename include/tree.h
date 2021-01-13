@@ -7,13 +7,13 @@
 #include <stdio.h>
 
 struct tree {
-    int8_t lh;
-    int8_t rh;
     void *data;
     char *key;
     struct tree *l;
     struct tree *r;
     struct tree *p;
+    int8_t lh;
+    int8_t rh;
 };
 
 struct tree *avl_search(struct tree *t, char *key);
