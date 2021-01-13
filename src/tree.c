@@ -1,6 +1,17 @@
 #include "../include/tree.h"
 
 struct tree *avl_search(struct tree *t, char *key) {
+    struct tree *p = t;
+    while (p != NULL) {
+        int cmp = strcmp(key, p->key);
+        if (cmp > 0) {
+            p = p->r;
+        } else if (cmp < 0) {
+            p = p->l;
+        } else {
+            return p;
+        }
+    }
     return NULL;
 }
 
@@ -21,14 +32,18 @@ struct tree *rotate_l(struct tree *n) {
     n->r = temp;
     // adjust heights
     if (temp != NULL) {
-        n->rh = temp->rh + temp->lh + 1;
+        n->rh = max(temp->rh, temp->lh) + 1;
     } else {
         n->rh = 0;
     }
-    b->lh = n->lh + n->rh;
-    b->rh = b->r->rh + b->r->lh + 1;
+    b->lh = max(n->lh, n->rh) + 1;
+    b->rh = max(b->r->rh, b->r->lh) + 1;
     if (b->p != NULL) {
-        b->p->r = b;
+        if (b->p->r == n) {
+            b->p->r = b;
+        } else {
+            b->p->l = b;
+        }
     }
     return b;
 }
@@ -50,14 +65,18 @@ struct tree *rotate_r(struct tree *n) {
     n->l = temp;
     // adjust heights
     if (temp != NULL) {
-        n->lh = temp->rh + temp->lh + 1;
+        n->lh = max(temp->rh, temp->lh) + 1;
     } else {
         n->lh = 0;
     }
-    b->rh = n->lh + n->rh;
-    b->lh = b->l->rh + b->l->lh + 1;
+    b->rh = max(n->lh, n->rh) + 1;
+    b->lh = max(b->l->rh, b->l->lh) + 1;
     if (b->p != NULL) {
-        b->p->l = b;
+        if (b->p->r == n) {
+            b->p->r = b;
+        } else {
+            b->p->l = b;
+        }
     }
     return b;
 }
@@ -80,7 +99,11 @@ struct tree *rotate_lr(struct tree *n) {
     b->rh = n->rh + 1;
     b->lh = b->l->lh + 1;
     if (b->p != NULL) {
-        b->p->r = b;
+        if (b->p->r == n) {
+            b->p->r = b;
+        } else {
+            b->p->l = b;
+        }
     }
     return b;
 }
@@ -103,7 +126,11 @@ struct tree *rotate_rl(struct tree *n) {
     b->lh = n->lh + 1;
     b->rh = b->r->rh + 1;
     if (b->p != NULL) {
-        b->p->l = b;
+        if (b->p->r == n) {
+            b->p->r = b;
+        } else {
+            b->p->l = b;
+        }
     }
     return b;
 }
@@ -112,7 +139,7 @@ struct tree *avl_add(struct tree *t, char *key, void *data) {
     struct tree *n = avl_make(key, data);
 
     if (t == NULL) {
-        return NULL;
+        return n;
     }
 
     // add to tree as normal
@@ -153,10 +180,10 @@ struct tree *avl_add(struct tree *t, char *key, void *data) {
         int8_t r = 0;
         int8_t l = 0;
         if (n->l != NULL) {
-            l = n->l->lh + n->l->rh + 1;
+            l = max(n->l->lh, n->l->rh) + 1;
         }
         if (n->r != NULL) {
-            r = n->r->lh + n->r->rh + 1;
+            r = max(n->r->lh, n->r->rh) + 1;
         }
         n->lh = l;
         n->rh = r;
@@ -212,11 +239,29 @@ struct tree *avl_make(char *key, void *data) {
 }
 
 void test() {
+    /*
     struct tree *t = avl_make("c", NULL);
     t = avl_add(t, "a", NULL);
     t = avl_add(t, "b", NULL);
     t = avl_add(t, "d", NULL);
     t = avl_add(t, "e", NULL);
+    */
+
+    //printf("%s\n", avl_search(t, "c")->key);
+
+    struct tree *t = NULL;
+    char *test = "cabfdzxywgh";
+    for (int i = 0; i < strlen(test); i++) {
+        char *key = malloc(2 * sizeof(char));
+        strncpy(key, &test[i], 1);
+        t = avl_add(t, key, NULL);
+    }
+
+    for (int i = 0; i < strlen(test); i++) {
+        char *key = malloc(2 * sizeof(char));
+        strncpy(key, &test[i], 1);
+        printf("%s ", avl_search(t, key)->key);
+    }
 
     printf("DONE\n");
 }

@@ -6,6 +6,11 @@
 #include <string.h>
 #include <stdio.h>
 
+//https://stackoverflow.com/questions/3437404/min-and-max-in-c
+#define max(x,y) ( \
+    { __auto_type __x = (x); __auto_type __y = (y); \
+      __x > __y ? __x : __y; })
+
 struct tree {
     void *data;
     char *key;
