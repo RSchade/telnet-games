@@ -23,7 +23,7 @@ struct tree {
 
 struct tree *avl_search(struct tree *t, char *key);
 struct tree *avl_add(struct tree *t, char *key, void *data);
-int avl_del(struct tree *t, char *key);
+int avl_del(struct tree **t, char *key);
 struct tree *avl_make(char *key, void *data);
 
 void test();

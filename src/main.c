@@ -600,13 +600,13 @@ void int_handler() {
 
 int main(int argc, char *argv[]) {
 
-    test();
-/*
+    //test();
+
     srand(time(0));
     ml_len = populate_master_list(&master_list);
     socket_init();
     signal(SIGINT, int_handler);
     socket_poll(event_loop);
     return 0;
-*/
+
 }
